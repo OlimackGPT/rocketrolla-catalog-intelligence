@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #070a12;
+  --bg-soft: #0e1424;
+  --card: #121a2c;
+  --line: #25304a;
+  --text: #e7ecf7;
+  --muted: #94a3b8;
+  --accent: #5ea0ff;
+}
+
+body {
+  background: radial-gradient(circle at top, #18243e 0%, var(--bg) 45%);
+  color: var(--text);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+.card { @apply rounded-2xl border p-5 shadow-2xl; background: linear-gradient(160deg, rgba(20,30,50,0.95), rgba(12,17,28,0.95)); border-color: var(--line); }
+.metric { @apply card; }
+.label { color: var(--muted); @apply text-xs uppercase tracking-[0.14em]; }
+.value { @apply mt-2 text-3xl font-semibold; }

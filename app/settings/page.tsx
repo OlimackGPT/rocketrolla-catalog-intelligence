@@ -1,0 +1,1 @@
+export default function SettingsPage(){const hasSupabase=Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL); const hasGemini=Boolean(process.env.GEMINI_API_KEY); return <section className="card"><h2 className="text-xl font-semibold">System Status</h2><p className="mt-2">Supabase: {hasSupabase?'Connected':'Mock mode'}</p><p>Gemini: {hasGemini?'Enabled':'Mock text mode'}</p></section>}

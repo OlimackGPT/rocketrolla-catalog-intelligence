@@ -1,0 +1,1 @@
+export default function ArtistProfile({ params }: { params: { id: string } }) {return <section className="card"><h2 className="text-xl font-semibold">Artist Profile: {params.id}</h2><p className="mt-2 text-slate-400">Mock profile with catalog, rights, and partner pipeline.</p></section>;}
