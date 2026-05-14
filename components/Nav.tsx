@@ -1,0 +1,3 @@
+import Link from 'next/link';
+const links=[['Dashboard','/'],['Upload CSV','/upload'],['Analytics','/analytics'],['Valuation','/valuation'],['Partner Fit','/recommendation'],['Report','/report'],['Settings','/settings']];
+export function Nav(){return <nav className="mb-8 rounded-2xl border border-white/10 bg-background/80 p-4"><div className="mb-3"><p className="text-sm uppercase tracking-[0.25em] text-primary">RocketRolla OS</p><p className="text-sm text-muted-foreground">Infrastructure for independent artists</p></div><div className="flex flex-wrap gap-2">{links.map(([l,h])=><Link key={h} href={h} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm hover:border-primary/40">{l}</Link>)}</div></nav>}
