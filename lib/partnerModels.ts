@@ -9,8 +9,11 @@ export type PartnerModelId =
   | 'duetti'
   | 'beatbread'
   | 'sound-royalties'
+  | 'snafu'
   | 'acrylic'
   | 'third-chair'
+  | 'copyright-delta'
+  | 'rightshub'
   | 'strommar'
   | 'aamf'
   | 'meteor'
@@ -20,12 +23,45 @@ export type PartnerModelId =
 
 export type PartnerValuationKind = 'dollar' | 'strategic';
 
+// The 7 verticals from RocketRolla's strategic positioning. Each partner can
+// belong to multiple verticals (Snafu = funding + marketing, Strommar =
+// distribution + marketing, etc.).
+export type Vertical =
+  | 'funding'
+  | 'marketing'
+  | 'distribution'
+  | 'sync'
+  | 'rights'
+  | 'creator'
+  | 'data';
+
+export const VERTICAL_LABELS: Record<Vertical, string> = {
+  funding: 'Funding / Catalog Financing',
+  marketing: 'Marketing / Artist Growth',
+  distribution: 'Distribution',
+  sync: 'Sync / Brands / Sports',
+  rights: 'Rights / Claims',
+  creator: 'Creator Infrastructure',
+  data: 'Data / Catalog Valuation',
+};
+
+export const VERTICAL_ORDER: Vertical[] = [
+  'funding',
+  'marketing',
+  'distribution',
+  'sync',
+  'rights',
+  'creator',
+  'data',
+];
+
 export type PartnerValuation = {
   id: PartnerModelId;
   name: string;
   category: string;
   structure: string;
   kind: PartnerValuationKind;
+  verticals: Vertical[];
   range?: { low: number; high: number; midpoint: number };
   termOptions?: { term: string; estimate: number }[];
   ownershipImpact: string;
@@ -53,31 +89,15 @@ function annualizedRevenue(metrics: RevenueMetrics): number {
   return Math.min(metrics.projectedNtm, metrics.last12Months || metrics.projectedNtm);
 }
 
-// Duetti is the most upside-sensitive financing/acquisition model. It blends
-// the underwriting engine's historical comp, momentum, and track-level lenses,
-// and is the model most likely to value future optimization (master-side
-// participation, selected-track acquisition, royalty share).
 function buildDuetti(input: PartnerInput): PartnerValuation {
-  const { metrics, valuation, readiness, attentionVal, underwriting } = input;
+  const { valuation, readiness, attentionVal, underwriting } = input;
   const comp = underwriting.methods.historicalComp;
-
-  // Pull the Duetti range from the underwriting blend, biased slightly toward
-  // the upper half because Duetti specifically prices upside (acquisition,
-  // royalty share). If historical comp is applicable, anchor low/high around
-  // the comp + strategic premiums.
   const final = underwriting.finalRange;
   const compRange = comp.applicable ? comp.range : final;
-
-  // Duetti's natural floor: max of (final.low, compRange.low).
-  // Duetti's natural ceiling: final.high boosted by attention upside cap when converting.
   const floor = Math.max(final.low, compRange.low);
   const upsideBoost = attentionVal.flags.attentionLiftsConfidence ? 1.18 : 1.05;
   const ceiling = Math.max(final.high, compRange.high) * upsideBoost;
   const midpoint = (floor + ceiling) / 2;
-
-  const low = round(floor);
-  const high = round(ceiling);
-  const mid = round(midpoint);
 
   const fit = clamp(
     readiness.components.revenueConsistency * 0.25 +
@@ -94,19 +114,20 @@ function buildDuetti(input: PartnerInput): PartnerValuation {
     category: 'Catalog Acquisition / Master-Side Participation',
     structure: 'Partial catalog sale · royalty share · selected tracks · master-side opportunity',
     kind: 'dollar',
-    range: { low, high, midpoint: mid },
+    verticals: ['funding'],
+    range: { low: round(floor), high: round(ceiling), midpoint: round(midpoint) },
     ownershipImpact: 'Partial ownership transfer or master-side participation on selected tracks. Remainder of catalog stays with artist.',
     bestFor: 'Catalogs where historical earnings + track-level upside justify pricing future optimization, not just current run rate.',
     mainRisk: 'Single-track concentration or unclear publishing splits compresses the offer; clean rights are essential.',
     whyFit:
-      'Duetti looks past current NTM to historical earning base and track-level upside. They are the most likely partner to price under-monetized attention and selected-track acquisition.',
+      'Duetti looks past current NTM to historical earning base and track-level upside. Most likely partner to price under-monetized attention and selected-track acquisition.',
     whyNotFit:
-      'They pass when revenue is too lumpy, metadata is dirty, or ownership is unclear. They are not the right call for pure-advance / artist-keeps-everything structures.',
+      'They pass when revenue is too lumpy, metadata is dirty, or ownership is unclear. Not the right call for pure-advance / artist-keeps-everything structures.',
     whatPartnerLikes:
       'Historical earnings base, track-level revenue + attention upside, multi-platform earnings, ISRC-clean ownership.',
     whatPartnerQuestions:
       'Sample clearances, ownership splits, sustainability of the lead track, any outstanding advances, what is being sold vs retained.',
-    suggestedAsk: `Frame as a partial-catalog or selected-tracks deal at ~$${mid.toLocaleString()}. Anchor on historical earnings and attention upside, not NTM alone. Open to royalty share on master-side participation.`,
+    suggestedAsk: `Frame as a partial-catalog or selected-tracks deal at ~$${round(midpoint).toLocaleString()}. Anchor on historical earnings and attention upside, not NTM alone. Open to royalty share on master-side participation.`,
     fitScore: fit,
     disclaimer: DISCLAIMER_OFFER('Duetti'),
     requiredProof: [
@@ -119,21 +140,15 @@ function buildDuetti(input: PartnerInput): PartnerValuation {
   };
 }
 
-// BeatBread is term-based funding (12 / 24 / 36 months), artist keeps ownership.
-// It is NOT a catalog purchase — values should be lower than Duetti when Duetti
-// is modeled as acquisition.
 function buildBeatBread(input: PartnerInput): PartnerValuation {
   const { metrics, valuation, readiness, attentionVal } = input;
   const annualized = annualizedRevenue(metrics);
-
-  // Term-based discounting against reliable annualized.
   const stabilityFactor = Math.max(0.7, readiness.components.revenueConsistency / 100 + 0.2);
   const growthFactor = 1 + Math.max(0, (readiness.components.recentGrowth - 50) / 200);
   const attentionConfidenceFactor = attentionVal.flags.attentionLiftsConfidence ? 1.08 : 1.0;
   const dataPenalty = readiness.components.metadataCompleteness < 50 ? 0.8 : 1;
   const monthly = (annualized / 12) * stabilityFactor * growthFactor * attentionConfidenceFactor * dataPenalty;
 
-  // Term × monthly × recoupment discount. Longer terms accept more risk → pay less per month.
   const term12 = round(monthly * 12 * 0.62);
   const term24 = round(monthly * 24 * 0.55);
   const term36 = round(monthly * 36 * 0.5);
@@ -155,6 +170,7 @@ function buildBeatBread(input: PartnerInput): PartnerValuation {
     category: 'Term-Based Advance Funding · Artist Retains Ownership',
     structure: 'Term advance (12 / 24 / 36 mo) against future royalties',
     kind: 'dollar',
+    verticals: ['funding'],
     range: { low, high, midpoint: mid },
     termOptions: [
       { term: '12 months', estimate: term12 },
@@ -165,7 +181,7 @@ function buildBeatBread(input: PartnerInput): PartnerValuation {
     bestFor: 'Catalogs with growth signal and forthcoming releases that lift forward earnings.',
     mainRisk: 'Long-term agreements compress per-month value; short terms maximize per-month but limit total advance.',
     whyFit:
-      'BeatBread\'s algorithmic model rewards growth + forward visibility. Fresh distributor reports and release roadmap directly move the offer.',
+      "BeatBread's algorithmic model rewards growth + forward visibility. Fresh distributor reports and release roadmap directly move the offer.",
     whyNotFit:
       'Not the right tool when the goal is to sell or partially acquire. Static catalogs underperform here.',
     whatPartnerLikes:
@@ -183,8 +199,6 @@ function buildBeatBread(input: PartnerInput): PartnerValuation {
   };
 }
 
-// Sound Royalties is a royalty-backed advance — artist keeps all copyrights.
-// Less sensitive to social attention than Duetti; cares about royalty reliability.
 function buildSoundRoyalties(input: PartnerInput): PartnerValuation {
   const { metrics, valuation, readiness } = input;
   const annualized = annualizedRevenue(metrics);
@@ -192,7 +206,6 @@ function buildSoundRoyalties(input: PartnerInput): PartnerValuation {
   const ownershipFactor = Math.min(1, readiness.components.ownershipClarity / 100 + 0.1);
   const concentrationFactor = Math.min(1, readiness.components.trackDiversification / 100 + 0.25);
 
-  // Conservative band: 1.8×–2.5× annualized × stability × ownership × concentration.
   const lowMult = 1.8 * stabilityFactor * ownershipFactor * concentrationFactor;
   const highMult = 2.5 * stabilityFactor * ownershipFactor * concentrationFactor;
   const low = round(annualized * lowMult);
@@ -212,6 +225,7 @@ function buildSoundRoyalties(input: PartnerInput): PartnerValuation {
     category: 'Royalty-Backed Advance · Artist Keeps Copyrights',
     structure: 'Advance against existing royalty streams · no ownership transfer',
     kind: 'dollar',
+    verticals: ['funding'],
     range: { low, high, midpoint: mid },
     ownershipImpact: 'No ownership transfer. Artist retains copyrights and masters.',
     bestFor: 'Catalogs with consistent royalty streams and clean publishing setup.',
@@ -235,6 +249,70 @@ function buildSoundRoyalties(input: PartnerInput): PartnerValuation {
   };
 }
 
+// Snafu Records — hybrid funding + marketing/growth partner. They underwrite
+// based on streaming data + growth potential and bring marketing capital
+// alongside. This is the partner for artists that need both money AND
+// marketing leverage, not just a pure advance.
+function buildSnafu(input: PartnerInput): PartnerValuation {
+  const { metrics, valuation, readiness, attentionVal, underwriting } = input;
+  const annualized = annualizedRevenue(metrics);
+
+  // Snafu's offer scales with growth signal + attention conversion (their
+  // data-driven model rewards trajectory) and stability (they want to know
+  // the marketing capital will compound on top of a real base).
+  const growthFactor = 1 + Math.max(0, (readiness.components.recentGrowth - 50) / 150);
+  const attentionFactor = attentionVal.flags.attentionLiftsConfidence ? 1.25 : 1.0;
+  const stabilityFactor = Math.max(0.7, readiness.components.revenueConsistency / 100 + 0.2);
+  const dataPenalty = readiness.components.metadataCompleteness < 50 ? 0.75 : 1;
+
+  // Base envelope: annualized × 2 (similar to Duetti floor) blended with a
+  // marketing-capital uplift proportional to attention. Capped by data quality.
+  const baseEnvelope = annualized * 2 * growthFactor * stabilityFactor * dataPenalty;
+  const marketingUplift = underwriting.methods.trackLevelUpside.base * 0.15 * attentionFactor;
+  const mid = round(baseEnvelope + marketingUplift);
+  const low = round(mid * 0.75);
+  const high = round(mid * 1.4);
+
+  const fit = clamp(
+    readiness.components.recentGrowth * 0.25 +
+      readiness.components.revenueConsistency * 0.2 +
+      valuation.confidence * 0.15 +
+      readiness.components.metadataCompleteness * 0.15 +
+      (attentionVal.flags.attentionLiftsConfidence ? 90 : 55) * 0.15 +
+      readiness.components.syncReadiness * 0.1,
+  );
+
+  return {
+    id: 'snafu',
+    name: 'Snafu Records',
+    category: 'Funding + Marketing / Data-Driven Growth Capital',
+    structure: 'Capital + marketing infrastructure · data-driven artist support',
+    kind: 'dollar',
+    verticals: ['funding', 'marketing'],
+    range: { low, high, midpoint: mid },
+    ownershipImpact: 'Negotiable — typically funding + marketing partnership, not full ownership transfer.',
+    bestFor: 'Artists that need both growth capital AND marketing leverage — not just a pure advance.',
+    mainRisk: 'Their model penalizes catalogs with no growth signal or no marketable angle.',
+    whyFit:
+      'Snafu underwrites on streaming + social data and brings marketing capital alongside the funding. Strong fit when there is real momentum and a marketing thesis.',
+    whyNotFit:
+      'Wrong fit for static catalogs that just need a recoupable advance with no marketing strategy attached.',
+    whatPartnerLikes:
+      'Growth trajectory, attention conversion, content/release roadmap, and willingness to engage their marketing layer.',
+    whatPartnerQuestions:
+      'What is the marketing plan? Which markets, which platforms, which audiences are we doubling down on?',
+    suggestedAsk: `Pitch as a capital + marketing partnership at ~$${mid.toLocaleString()}. Bring the growth thesis and the data; they bring the capital and the marketing infrastructure.`,
+    fitScore: fit,
+    disclaimer: DISCLAIMER_OFFER('Snafu Records'),
+    requiredProof: [
+      '12 months of revenue + audience trend data',
+      'Marketing thesis: which markets, audiences, content angles',
+      'Release roadmap for the next 6 months',
+      'Confirmation no exclusivity with another label / fund',
+    ],
+  };
+}
+
 function buildAcrylic(input: PartnerInput): PartnerValuation {
   const { readiness, trackMomentum } = input;
   const syncCandidates = trackMomentum.filter(
@@ -248,6 +326,7 @@ function buildAcrylic(input: PartnerInput): PartnerValuation {
     category: 'Sync / Sports / Brand Placements',
     structure: 'Placement revenue · no advance · per-use licensing',
     kind: 'strategic',
+    verticals: ['sync'],
     ownershipImpact: 'No ownership transfer. Per-placement license fees.',
     bestFor: 'Catalogs with sync-ready, instrumental, or genre-flexible tracks.',
     mainRisk: 'Without stems or cleared masters, the catalog is invisible to supervisors.',
@@ -290,6 +369,7 @@ function buildThirdChair(input: PartnerInput): PartnerValuation {
     category: 'Rights Recovery · Claims · Unlicensed Usage',
     structure: 'Claims revenue · venue / hotel / event / UGC detection',
     kind: 'strategic',
+    verticals: ['rights'],
     ownershipImpact: 'No ownership transfer. Passive claims-based revenue.',
     bestFor: 'Catalogs with UGC exposure or unclear public-performance reporting.',
     mainRisk: "No usable signal if metadata + ownership aren't locked first.",
@@ -309,6 +389,77 @@ function buildThirdChair(input: PartnerInput): PartnerValuation {
   };
 }
 
+// Copyright Delta — rights forensics + ownership cleanup. Different angle
+// from Third Chair: less about claims recovery, more about catalog metadata
+// integrity and ownership intelligence as a pre-deal cleanup layer.
+function buildCopyrightDelta(input: PartnerInput): PartnerValuation {
+  const { readiness } = input;
+  const metadataGap = 100 - readiness.components.metadataCompleteness;
+  const ownershipGap = 100 - readiness.components.ownershipClarity;
+  const fit = clamp(metadataGap * 0.55 + ownershipGap * 0.35 + 30 * 0.1);
+  return {
+    id: 'copyright-delta',
+    name: 'Copyright Delta',
+    category: 'Rights Forensics · Catalog Metadata · Ownership Intelligence',
+    structure: 'Diagnostic scan · ownership reconciliation · pre-deal cleanup',
+    kind: 'strategic',
+    verticals: ['rights'],
+    ownershipImpact: 'No ownership transfer. Diagnostic + cleanup layer.',
+    bestFor: 'Catalogs with metadata gaps or ambiguous splits that would slow partner diligence.',
+    mainRisk: 'Cleanup work surfaces issues that need to be resolved before financing — adds friction up front, value compounds later.',
+    whyFit:
+      'Most indie catalogs lose value at the metadata / ownership layer. Copyright Delta finds the gaps and fixes them before they cost a deal.',
+    whyNotFit:
+      'Less useful if metadata is already audited and split sheets are signed.',
+    whatPartnerLikes:
+      'Catalogs entering a financing or sync conversation that want a clean diligence pack.',
+    whatPartnerQuestions:
+      'Are there known split disputes? Any tracks with unresolved sample issues?',
+    suggestedAsk:
+      'Run the diagnostic scan as a pre-deal sprint. Use the output to harden the data room before partner outreach.',
+    fitScore: fit,
+    disclaimer: DISCLAIMER_STRATEGIC('Copyright Delta'),
+    requiredProof: ['Track list with ISRCs', 'Known split sheets (even if incomplete)', 'Publisher / PRO info'],
+  };
+}
+
+// RightsHub — rights infrastructure. PRO registration automation, ongoing
+// admin, automated claim filing. The "always-on" layer that complements
+// Third Chair (one-time recovery) and Copyright Delta (forensics).
+function buildRightsHub(input: PartnerInput): PartnerValuation {
+  const { readiness } = input;
+  const fit = clamp(
+    (100 - readiness.components.metadataCompleteness) * 0.3 +
+      readiness.components.ownershipClarity * 0.3 +
+      (100 - readiness.components.platformDiversification) * 0.2 +
+      40 * 0.2,
+  );
+  return {
+    id: 'rightshub',
+    name: 'RightsHub',
+    category: 'Rights Infrastructure · PRO Management · Automated Registration',
+    structure: 'Always-on rights stack · automated registration · claim filing',
+    kind: 'strategic',
+    verticals: ['rights'],
+    ownershipImpact: 'No ownership transfer. Infrastructure layer.',
+    bestFor: 'Catalogs that need an always-on rights stack rather than a one-time scan.',
+    mainRisk: 'Operating cost only pays off if the catalog generates enough activity to recover meaningful claims.',
+    whyFit:
+      'Automates PRO registrations, claim filings, and metadata sync across territories. Best paired with Third Chair (recovery) and Copyright Delta (forensics).',
+    whyNotFit:
+      'Overkill for very small catalogs without recurring activity.',
+    whatPartnerLikes:
+      'Catalogs with documented ownership and ongoing release activity that benefits from automation.',
+    whatPartnerQuestions:
+      'What is the release cadence? Which PROs are in scope?',
+    suggestedAsk:
+      'Plug in as the ongoing rights layer after a Third Chair recovery or Copyright Delta cleanup pass.',
+    fitScore: fit,
+    disclaimer: DISCLAIMER_STRATEGIC('RightsHub'),
+    requiredProof: ['Confirmed PRO affiliations', 'Active release schedule', 'Ownership/splits documentation'],
+  };
+}
+
 function buildStrommar(input: PartnerInput): PartnerValuation {
   const { metrics, readiness } = input;
   const platformConcentration = 100 - readiness.components.platformDiversification;
@@ -323,6 +474,7 @@ function buildStrommar(input: PartnerInput): PartnerValuation {
     category: 'Distribution Infrastructure · Release Ops · Migration',
     structure: 'Distribution migration + release ops + team structure',
     kind: 'strategic',
+    verticals: ['distribution', 'marketing'],
     ownershipImpact: 'No ownership transfer. Distribution stack only.',
     bestFor: 'Catalogs with messy distributor reports, single-platform exposure, or migration needs.',
     mainRisk: 'Migrating mid-deal can disrupt royalty flow timing — schedule carefully.',
@@ -356,6 +508,7 @@ function buildAamf(input: PartnerInput): PartnerValuation {
     category: 'Strategic Funding · Advisory · Fund-Style Opportunity',
     structure: 'Strategic capital + team backing',
     kind: 'strategic',
+    verticals: ['funding', 'marketing'],
     ownershipImpact: 'Negotiable — usually structured as equity / advisory + capital.',
     bestFor: 'Artists with a growth story, team potential, and strategic upside — not static catalogs.',
     mainRisk: 'Requires a credible team narrative; a pure catalog play is the wrong frame.',
@@ -394,6 +547,7 @@ function buildMeteor(input: PartnerInput): PartnerValuation {
     category: 'Culture · Independent Latin · Strategic Artist Partner',
     structure: 'Collaboration · cultural strategy · regional positioning',
     kind: 'strategic',
+    verticals: ['marketing'],
     ownershipImpact: 'No ownership transfer. Strategic engagement only.',
     bestFor: 'Artists with cultural fit, regional story, or collaboration potential.',
     mainRisk: 'Soft commitments — value compounds over time, not in a single deal.',
@@ -423,6 +577,7 @@ function buildStreamfic(input: PartnerInput): PartnerValuation {
     category: 'Creator Campaigns · Short-Form · UGC Activation',
     structure: 'Creator activation · short-form campaigns · streamer/UGC infra',
     kind: 'strategic',
+    verticals: ['creator', 'marketing'],
     ownershipImpact: 'No ownership transfer. Performance-marketing style engagement.',
     bestFor: 'Tracks with TikTok / Reels / streamer / UGC potential.',
     mainRisk: 'Without an attention-friendly track, campaign returns are noisy.',
@@ -459,6 +614,7 @@ function buildNextChapter(input: PartnerInput): PartnerValuation {
     category: 'International Expansion · Strategic Partner · Dubai / Global',
     structure: 'Advisory · funding · market-entry support',
     kind: 'strategic',
+    verticals: ['marketing'],
     ownershipImpact: 'Structured per engagement — usually strategic, not ownership.',
     bestFor: 'Artists with global expansion or market-entry potential.',
     mainRisk: 'Slower-moving than a financing deal; expect a strategic horizon.',
@@ -494,6 +650,7 @@ function buildMelino(input: PartnerInput): PartnerValuation {
     category: 'Strategic Music Business Partner',
     structure: 'Advisory · funding · catalog ops · rights / growth pathway',
     kind: 'strategic',
+    verticals: ['marketing'],
     ownershipImpact: 'Structured per engagement — strategic vs ownership negotiable.',
     bestFor: 'Artists/catalogs that need a multi-layer infrastructure partner.',
     mainRisk: 'Engagement requires a real plan; not the right call without one.',
@@ -523,8 +680,11 @@ export function buildPartnerValuations(input: PartnerInput): PartnerValuation[] 
     buildDuetti(input),
     buildBeatBread(input),
     buildSoundRoyalties(input),
+    buildSnafu(input),
     buildAcrylic(input),
     buildThirdChair(input),
+    buildCopyrightDelta(input),
+    buildRightsHub(input),
     buildStrommar(input),
     buildAamf(input),
     buildMeteor(input),
@@ -532,4 +692,30 @@ export function buildPartnerValuations(input: PartnerInput): PartnerValuation[] 
     buildNextChapter(input),
     buildMelino(input),
   ].sort((a, b) => b.fitScore - a.fitScore);
+}
+
+// Groups partners by their primary verticals. A partner can appear in
+// multiple verticals (e.g. Snafu in both Funding and Marketing).
+export function groupPartnersByVertical(
+  partners: PartnerValuation[],
+): Record<Vertical, PartnerValuation[]> {
+  const result: Record<Vertical, PartnerValuation[]> = {
+    funding: [],
+    marketing: [],
+    distribution: [],
+    sync: [],
+    rights: [],
+    creator: [],
+    data: [],
+  };
+  for (const p of partners) {
+    for (const v of p.verticals) {
+      result[v].push(p);
+    }
+  }
+  // Sort each bucket by fit score descending.
+  (Object.keys(result) as Vertical[]).forEach((v) => {
+    result[v].sort((a, b) => b.fitScore - a.fitScore);
+  });
+  return result;
 }

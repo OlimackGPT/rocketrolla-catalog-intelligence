@@ -10,10 +10,11 @@ import { computeDealReadiness, recommendStrategy } from './dealReadiness';
 import { buildPartnerMatrix } from './partnerMatrix';
 import { computeTrackMomentum } from './trackMomentum';
 import { buildAttentionValuation, computeTrackContributions } from './attentionValuation';
-import { buildPartnerValuations } from './partnerModels';
+import { buildPartnerValuations, groupPartnersByVertical } from './partnerModels';
 import { buildForecastScenarios } from './forecasts';
 import { buildUnderwriting } from './underwritingEngine';
 import { buildUnderwritingMemo } from './underwritingMemo';
+import { buildRoutingPlan } from './routingPlan';
 import { safeGetItem, safeRemoveItem } from './safeStorage';
 
 // `rr_catalog` stores ONLY the aggregated catalog summary (RevenueMetrics).
@@ -257,6 +258,16 @@ export function useDealAnalysis() {
     [catalog.metrics, catalog.valuation, readiness, strategy, underwriting, partnerValuations],
   );
 
+  const routingPlan = useMemo(
+    () => buildRoutingPlan({ readiness, attentionVal, underwriting, partners: partnerValuations }),
+    [readiness, attentionVal, underwriting, partnerValuations],
+  );
+
+  const partnersByVertical = useMemo(
+    () => groupPartnersByVertical(partnerValuations),
+    [partnerValuations],
+  );
+
   return {
     ...catalog,
     momentum: momentumState,
@@ -267,8 +278,10 @@ export function useDealAnalysis() {
     underwriting,
     partnerValuations,
     partners,
+    partnersByVertical,
     trackContributions,
     forecasts,
     memo,
+    routingPlan,
   };
 }

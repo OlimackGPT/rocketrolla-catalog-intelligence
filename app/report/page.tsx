@@ -3,6 +3,7 @@
 import { useDealAnalysis } from '@/lib/hooks';
 import { computeMomentumSignals } from '@/lib/momentum';
 import { buildPartnerPitch, buildSnapshot } from '@/lib/pitch';
+import { PHASE_LABELS } from '@/lib/routingPlan';
 import { DemoDataBadge } from '@/components/DemoDataBadge';
 
 const fmtUsd = (v: number) =>
@@ -13,7 +14,7 @@ const fmtUsd = (v: number) =>
   }).format(v);
 
 const PARTNER_LIST_FOR_DISCLAIMER =
-  'Duetti, BeatBread, Sound Royalties, Acrylic, Third Chair, Strommar, AAMF, Meteor, Melino, Next Chapter, Streamfic';
+  'Duetti, BeatBread, Sound Royalties, Snafu Records, Acrylic, Third Chair, Copyright Delta, RightsHub, Strommar, AAMF, Meteor, Melino, Next Chapter, Streamfic';
 
 export default function ReportPage() {
   const {
@@ -29,6 +30,7 @@ export default function ReportPage() {
     trackContributions,
     memo,
     momentum,
+    routingPlan,
     hasUserData,
     hydrated,
   } = useDealAnalysis();
@@ -458,24 +460,77 @@ export default function ReportPage() {
             </p>
           </Section>
 
-          {/* 15 — Recommended Ask */}
-          <Section title="Recommended Ask" index="15">
+          {/* 15 — Routing Plan · 30/60/90 */}
+          <Section title="Routing Plan · 30 / 60 / 90 Days" index="15">
+            <p className="mb-4 text-sm leading-relaxed text-white/65 print:text-gray-700">
+              <strong className="text-white print:text-black">{routingPlan.headline}</strong> {routingPlan.rationale}
+            </p>
+            <div className="grid gap-3 lg:grid-cols-4">
+              {(['now', '30-day', '60-day', '90-day'] as const).map((phase) => {
+                const steps = routingPlan.steps.filter((s) => s.phase === phase);
+                return (
+                  <div
+                    key={phase}
+                    className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 print:border-gray-100 print:bg-gray-50"
+                  >
+                    <p className="mb-3 text-[10px] font-black tracking-[0.3em] uppercase text-purple-300/90 print:text-purple-700">
+                      {PHASE_LABELS[phase]}
+                    </p>
+                    {steps.length === 0 ? (
+                      <p className="text-xs text-white/35 print:text-gray-500">No action scheduled.</p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {steps.map((s) => (
+                          <li
+                            key={s.id}
+                            className="rounded-lg border border-white/[0.06] bg-black/20 p-3 print:border-gray-200 print:bg-white"
+                          >
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p className="text-xs font-bold text-white print:text-black">{s.title}</p>
+                              <span className="text-[9px] font-black tracking-widest uppercase text-purple-300/80 print:text-purple-700">
+                                {s.priority}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[10px] leading-relaxed text-white/55 print:text-gray-700">
+                              {s.description}
+                            </p>
+                            {s.partnerIds.length > 0 && (
+                              <p className="mt-1.5 text-[9px] tracking-widest uppercase text-white/40">
+                                Partners: {s.partnerIds.map((id) => partners.find((p) => p.id === id)?.name ?? id).join(' · ')}
+                              </p>
+                            )}
+                            <p className="mt-1.5 text-[9px] font-bold tracking-widest uppercase text-emerald-400/70 print:text-emerald-700">
+                              Done when:
+                            </p>
+                            <p className="text-[10px] text-white/55 print:text-gray-700">{s.doneCriteria}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* 16 — Recommended Ask */}
+          <Section title="Recommended Ask" index="16">
             <p className="text-sm leading-relaxed text-white/70 print:text-gray-700">{memo.suggestedAsk}</p>
             <p className="mt-2 text-sm leading-relaxed text-white/65 print:text-gray-700">
               {memo.recommendedRoute}
             </p>
           </Section>
 
-          {/* 16 — Negotiation Notes */}
-          <Section title="Negotiation Notes" index="16">
+          {/* 17 — Negotiation Notes */}
+          <Section title="Negotiation Notes" index="17">
             <div className="grid gap-3 md:grid-cols-2">
               <ListBlock label="Why This May Be Worth More" items={underwriting.whyHigherThanNtm} accent="emerald" />
               <ListBlock label="What Could Reduce" items={underwriting.whatCouldReduce} accent="red" />
             </div>
           </Section>
 
-          {/* 17 — Partner Email Pitch */}
-          <Section title="Partner Email Pitch" index="17">
+          {/* 18 — Partner Email Pitch */}
+          <Section title="Partner Email Pitch" index="18">
             <div className="rounded-xl border border-white/[0.06] bg-black/20 p-5 print:border-gray-200 print:bg-gray-50">
               <p className="mb-1 text-[10px] font-bold tracking-widest uppercase text-white/25 print:text-gray-400">
                 Target Partner
@@ -497,8 +552,8 @@ export default function ReportPage() {
             </div>
           </Section>
 
-          {/* 18 — Risk Warnings */}
-          <Section title="Risk Warnings" index="18">
+          {/* 19 — Risk Warnings */}
+          <Section title="Risk Warnings" index="19">
             {underwriting.riskDiscounts.length === 0 ? (
               <p className="text-xs text-white/40 print:text-gray-500">
                 No material risk warnings flagged.
@@ -521,8 +576,8 @@ export default function ReportPage() {
             )}
           </Section>
 
-          {/* 19 — Disclaimer */}
-          <Section title="Disclaimer" index="19">
+          {/* 20 — Disclaimer */}
+          <Section title="Disclaimer" index="20">
             <p className="text-xs leading-relaxed text-white/40 print:text-gray-600">
               These estimates are internal RocketRolla projections and do not represent guaranteed
               offers from {PARTNER_LIST_FOR_DISCLAIMER}, or any partner. Final offers depend on

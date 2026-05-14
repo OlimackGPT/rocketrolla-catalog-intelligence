@@ -232,12 +232,65 @@ function angleStrategic(i: AngleInput, opener: string, asks: string[]): string {
   ].join('\n');
 }
 
+function angleSnafu(i: AngleInput): string {
+  const { snapshot, partner, partnerValuation, attentionVal, underwriting } = i;
+  return [
+    commonOpener(snapshot, partner),
+    '',
+    `Why Snafu Records:`,
+    `· Capital + marketing infrastructure together — not just an advance, not just a marketing service.`,
+    `· Streaming + social data both feed their underwriting: ${snapshot.monthsOfData} months of data, run rate ${snapshot.runRate ? '$' + Math.round(snapshot.runRate).toLocaleString() : '—'}/mo, attention upside ${'$' + Math.round(attentionVal.attentionUpside.raw).toLocaleString()}.`,
+    `· Final RocketRolla internal range: $${Math.round(underwriting.finalRange.low / 1000)}k–$${Math.round(underwriting.finalRange.high / 1000)}k at ${snapshot.underwritingConfidence}% confidence.`,
+    '',
+    rangeLine(partnerValuation),
+    '',
+    `Suggested ask: pitch as a capital + marketing partnership. Bring the growth thesis (markets, audiences, content angles) alongside the catalog data — Snafu wants to know what the marketing layer unlocks, not just what the catalog earned last year.`,
+    '',
+    commonClose(),
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function angleCopyrightDelta(i: AngleInput): string {
+  const { snapshot, partner } = i;
+  return [
+    commonOpener(snapshot, partner),
+    '',
+    `Why Copyright Delta:`,
+    `· Pre-deal diagnostic on metadata + ownership. Cleans the data room before partner diligence.`,
+    `· Useful as a 1–2 week sprint that compounds value on every later partner conversation.`,
+    '',
+    `Suggested ask: a diagnostic scan with a written cleanup plan. Use the output to harden the data room before financing outreach.`,
+    '',
+    commonClose(),
+  ].join('\n');
+}
+
+function angleRightsHub(i: AngleInput): string {
+  const { snapshot, partner } = i;
+  return [
+    commonOpener(snapshot, partner),
+    '',
+    `Why RightsHub:`,
+    `· Always-on rights stack — PRO management, automated registration, claim filing.`,
+    `· Pairs with Third Chair (one-time recovery) and Copyright Delta (diagnostic) as the infra layer.`,
+    '',
+    `Suggested ask: plug in after a cleanup pass to keep registrations + claims compounding.`,
+    '',
+    commonClose(),
+  ].join('\n');
+}
+
 const ANGLE_BY_PARTNER: Record<PartnerModelId, (i: AngleInput) => string> = {
   duetti: angleDuetti,
   beatbread: angleBeatBread,
   'sound-royalties': angleSoundRoyalties,
+  snafu: angleSnafu,
   acrylic: angleAcrylic,
   'third-chair': angleThirdChair,
+  'copyright-delta': angleCopyrightDelta,
+  rightshub: angleRightsHub,
   strommar: (i) =>
     angleStrategic(
       i,

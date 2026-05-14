@@ -55,18 +55,73 @@ const workflow: { step: string; title: string; desc: string; href: Route; accent
   },
 ];
 
-const partners = [
-  { name: 'Duetti', type: 'Catalog Acquisition', color: 'purple' },
-  { name: 'BeatBread', type: 'Advance Funding', color: 'purple' },
-  { name: 'Sound Royalties', type: 'Royalty-Backed Advance', color: 'emerald' },
-  { name: 'Acrylic', type: 'Sync / Sports / Brand', color: 'purple' },
-  { name: 'Third Chair', type: 'Rights Recovery', color: 'blue' },
-  { name: 'Strommar', type: 'Distribution Infra', color: 'blue' },
-  { name: 'AAMF', type: 'Strategic Funding', color: 'rose' },
-  { name: 'Meteor', type: 'Culture / Latin', color: 'rose' },
-  { name: 'Streamfic', type: 'Creator Campaigns', color: 'amber' },
-  { name: 'Next Chapter', type: 'International Expansion', color: 'rose' },
-  { name: 'Melino', type: 'Music Business Infra', color: 'rose' },
+type EcosystemVertical = {
+  id: string;
+  label: string;
+  color: 'purple' | 'emerald' | 'blue' | 'amber' | 'rose';
+  partners: { name: string; note?: string }[];
+};
+
+const ecosystem: EcosystemVertical[] = [
+  {
+    id: 'funding',
+    label: 'Funding / Catalog Financing',
+    color: 'purple',
+    partners: [
+      { name: 'Duetti', note: 'Catalog acquisition' },
+      { name: 'BeatBread', note: 'Term advance' },
+      { name: 'Sound Royalties', note: 'Royalty-backed' },
+      { name: 'Snafu Records', note: 'Capital + marketing' },
+      { name: 'AAMF', note: 'Strategic capital' },
+    ],
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing / Artist Growth',
+    color: 'emerald',
+    partners: [
+      { name: 'Snafu Records', note: 'Data-driven growth' },
+      { name: 'Strommar', note: 'Release ops' },
+      { name: 'Streamfic', note: 'Creator campaigns' },
+      { name: 'Meteor', note: 'Culture / Latin' },
+      { name: 'Next Chapter', note: 'International' },
+      { name: 'Melino', note: 'Music business infra' },
+    ],
+  },
+  {
+    id: 'distribution',
+    label: 'Distribution',
+    color: 'blue',
+    partners: [{ name: 'Strommar', note: 'Distribution infrastructure' }],
+  },
+  {
+    id: 'sync',
+    label: 'Sync / Brands / Sports',
+    color: 'purple',
+    partners: [{ name: 'Acrylic', note: 'Sync / sports / brand' }],
+  },
+  {
+    id: 'rights',
+    label: 'Rights / Claims',
+    color: 'blue',
+    partners: [
+      { name: 'Third Chair', note: 'Claims recovery' },
+      { name: 'Copyright Delta', note: 'Rights forensics' },
+      { name: 'RightsHub', note: 'Rights infrastructure' },
+    ],
+  },
+  {
+    id: 'creator',
+    label: 'Creator Infrastructure',
+    color: 'amber',
+    partners: [{ name: 'Streamfic', note: 'UGC / streamer activation' }],
+  },
+  {
+    id: 'data',
+    label: 'Data / Catalog Valuation',
+    color: 'rose',
+    partners: [{ name: 'RocketRolla', note: 'Catalog Intelligence Engine' }],
+  },
 ];
 
 export default function Home() {
@@ -214,32 +269,66 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Partner Layers */}
+      {/* Partner Ecosystem · 7 verticals */}
       <section>
-        <p className="mb-4 text-[10px] font-semibold tracking-[0.25em] uppercase text-white/30">
-          Partner Ecosystem
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {partners.map((p) => {
-            const colorMap: Record<string, string> = {
-              emerald: 'border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-300',
-              purple: 'border-purple-500/25 bg-purple-500/[0.08] text-purple-200',
-              blue: 'border-blue-500/20 bg-blue-500/[0.07] text-blue-300',
-              amber: 'border-amber-500/20 bg-amber-500/[0.07] text-amber-300',
-              rose: 'border-rose-500/20 bg-rose-500/[0.07] text-rose-300',
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-white/30">
+            Partner Ecosystem · 7 Verticals
+          </p>
+          <p className="text-[10px] tracking-widest uppercase text-white/25">
+            14 partners · Routing layer for independent artists
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {ecosystem.map((v) => {
+            const colorMap: Record<EcosystemVertical['color'], string> = {
+              emerald: 'border-emerald-500/20 bg-emerald-500/[0.04]',
+              purple: 'border-purple-500/25 bg-purple-500/[0.05]',
+              blue: 'border-blue-500/20 bg-blue-500/[0.04]',
+              amber: 'border-amber-500/20 bg-amber-500/[0.04]',
+              rose: 'border-rose-500/20 bg-rose-500/[0.04]',
+            };
+            const labelColor: Record<EcosystemVertical['color'], string> = {
+              emerald: 'text-emerald-300/80',
+              purple: 'text-purple-200/90',
+              blue: 'text-blue-300/80',
+              amber: 'text-amber-300/80',
+              rose: 'text-rose-300/80',
+            };
+            const dotColor: Record<EcosystemVertical['color'], string> = {
+              emerald: 'bg-emerald-400',
+              purple: 'bg-purple-400',
+              blue: 'bg-blue-400',
+              amber: 'bg-amber-400',
+              rose: 'bg-rose-400',
             };
             return (
               <div
-                key={p.name}
-                className={`rounded-xl border px-4 py-2.5 ${colorMap[p.color]}`}
+                key={v.id}
+                className={`rounded-2xl border p-5 ${colorMap[v.color]}`}
               >
-                <p className="text-sm font-semibold">{p.name}</p>
-                <p className="text-[10px] tracking-widest uppercase opacity-60">{p.type}</p>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${dotColor[v.color]}`} />
+                  <p className={`text-[10px] font-black tracking-[0.3em] uppercase ${labelColor[v.color]}`}>
+                    {v.label}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  {v.partners.map((p) => (
+                    <div key={`${v.id}-${p.name}`} className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-white/85">{p.name}</span>
+                      {p.note && (
+                        <span className="text-[10px] tracking-widest uppercase text-white/35">{p.note}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
         </div>
       </section>
+
     </div>
   );
 }

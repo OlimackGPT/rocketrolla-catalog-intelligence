@@ -2,6 +2,8 @@
 
 import { useDealAnalysis } from '@/lib/hooks';
 import { DemoDataBadge } from '@/components/DemoDataBadge';
+import { RoutingPlanCard } from '@/components/RoutingPlan';
+import { PartnerEcosystemByVertical } from '@/components/PartnerEcosystemByVertical';
 import { PartnerValuationMatrix } from '@/components/PartnerValuationMatrix';
 import { PartnerPathwayTable } from '@/components/PartnerPathwayTable';
 import { PartnerOfferSimulator } from '@/components/PartnerOfferSimulator';
@@ -21,6 +23,8 @@ export default function RecommendationPage() {
     strategy,
     partners,
     partnerValuations,
+    partnersByVertical,
+    routingPlan,
     hasUserData,
     hydrated,
   } = useDealAnalysis();
@@ -30,12 +34,12 @@ export default function RecommendationPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-1 text-[10px] font-semibold tracking-[0.3em] uppercase text-purple-300/80">
-            Strategic Positioning
+            Routing Layer
           </p>
-          <h1 className="text-2xl font-black tracking-tight text-white">Partner Fit Matrix</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">Partner Fit + 30/60/90 Plan</h1>
           <p className="mt-2 max-w-2xl text-sm text-white/45">
-            Each partner is scored against the underwriting brain&apos;s final range. Use the
-            Pathway Table for a side-by-side, then dig into specific partners with the simulator.
+            RocketRolla&apos;s routing layer scores 14 partners across 7 verticals against this catalog,
+            then sequences them into an executable plan.
           </p>
         </div>
         <DemoDataBadge visible={hydrated && !hasUserData} />
@@ -44,7 +48,7 @@ export default function RecommendationPage() {
       {/* Strategy callout */}
       <StrategyRecommendationCard strategy={strategy} />
 
-      {/* Summary chips referencing the underwriting brain */}
+      {/* Summary chips */}
       <div className="flex flex-wrap gap-3">
         {[
           {
@@ -69,6 +73,12 @@ export default function RecommendationPage() {
         ))}
       </div>
 
+      {/* Routing Plan — the operational layer */}
+      <RoutingPlanCard plan={routingPlan} partners={partners} />
+
+      {/* Partner Ecosystem by Vertical */}
+      <PartnerEcosystemByVertical partnersByVertical={partnersByVertical} />
+
       {/* Pathway Table */}
       <section className="space-y-3">
         <div>
@@ -82,7 +92,7 @@ export default function RecommendationPage() {
         <PartnerPathwayTable partnerValuations={partnerValuations} />
       </section>
 
-      {/* Partner Offer Simulator */}
+      {/* Offer Simulator */}
       <PartnerOfferSimulator partnerValuations={partnerValuations} />
 
       {/* Detailed valuation matrix */}

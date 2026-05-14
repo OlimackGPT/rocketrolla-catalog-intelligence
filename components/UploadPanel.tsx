@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { computeMetrics, parseCsvDetailed, pruneMetricsForStorage } from '@/lib/csv';
 import { expectedColumnSchema } from '@/lib/sampleCsv';
 import { SampleCsvDownload } from '@/components/SampleCsvDownload';
@@ -161,6 +162,58 @@ export function UploadPanel() {
               {e}
             </p>
           ))}
+        </div>
+      )}
+
+      {/* Post-upload CTA — explicit handoff to the analysis surfaces */}
+      {isSuccess && (
+        <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-500/[0.08] to-emerald-500/[0.04] p-6 shadow-[0_0_40px_rgba(167,139,250,0.10)]">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black tracking-[0.3em] uppercase text-purple-300/90">
+                Next Step
+              </p>
+              <h3 className="mt-1 text-lg font-black tracking-tight text-white">
+                Your catalog is ready. View the underwriting analysis.
+              </h3>
+              <p className="mt-1 text-xs text-white/55">
+                Multi-method valuation, partner fit matrix, 30/60/90 routing plan, and a printable
+                report — all built from the data you just uploaded.
+              </p>
+            </div>
+            <Link
+              href="/valuation"
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-500 px-5 py-2.5 text-sm font-bold tracking-wide text-white transition-all hover:bg-purple-400 hover:shadow-[0_0_24px_rgba(167,139,250,0.35)]"
+            >
+              View Underwriting →
+            </Link>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/analytics"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase text-white/65 hover:bg-white/[0.07] hover:text-white"
+            >
+              · Analytics
+            </Link>
+            <Link
+              href="/readiness"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase text-white/65 hover:bg-white/[0.07] hover:text-white"
+            >
+              · Deal Readiness
+            </Link>
+            <Link
+              href="/recommendation"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase text-white/65 hover:bg-white/[0.07] hover:text-white"
+            >
+              · Partner Fit + Routing Plan
+            </Link>
+            <Link
+              href="/report"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase text-white/65 hover:bg-white/[0.07] hover:text-white"
+            >
+              · Full Report
+            </Link>
+          </div>
         </div>
       )}
 
