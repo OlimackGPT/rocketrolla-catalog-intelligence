@@ -35,10 +35,10 @@ declare namespace __next_route_internal_types__ {
     | `/artists/new`
     | `/readiness`
     | `/recommendation`
-    | `/report`
     | `/settings`
-    | `/upload`
+    | `/report`
     | `/valuation`
+    | `/upload`
   type DynamicRoutes<T extends string = string> = 
     | `/artist/${SafeSlug<T>}`
 

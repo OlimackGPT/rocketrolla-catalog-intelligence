@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { RevenueMetrics, RevenueRow, TrackAttention, emptyAttention } from './types';
+import { RevenueMetrics, RevenueRow, RowStats, TrackAttention, emptyAttention, emptyRowStats } from './types';
 import { parseCompactNumber } from './compactNumber';
 
 // Header aliases for required + optional fields. Matching is case-insensitive substring.
@@ -148,6 +148,8 @@ export function computeMetrics(rows: RevenueRow[]): RevenueMetrics {
   const countryMap = new Map<string, number>();
   const trackAttention: Record<string, TrackAttention> = {};
   let hasAttention = false;
+  const rowStats: RowStats = emptyRowStats();
+  rowStats.totalRows = rows.length;
 
   for (const r of rows) {
     monthMap.set(r.month, (monthMap.get(r.month) ?? 0) + r.revenueUsd);
@@ -155,6 +157,14 @@ export function computeMetrics(rows: RevenueRow[]): RevenueMetrics {
     trackStreams.set(r.trackTitle, (trackStreams.get(r.trackTitle) ?? 0) + r.streams);
     platformMap.set(r.platform, (platformMap.get(r.platform) ?? 0) + r.revenueUsd);
     countryMap.set(r.country, (countryMap.get(r.country) ?? 0) + r.revenueUsd);
+
+    if (Number.isFinite(r.revenueUsd) && r.revenueUsd > 0) rowStats.rowsWithRevenue++;
+    else rowStats.rowsWithMissingRevenue++;
+    if (r.month && r.month.length >= 7) rowStats.rowsWithDate++;
+    else rowStats.rowsWithMissingDate++;
+    if (r.isrc && r.isrc.trim().length > 0) rowStats.rowsWithIsrc++;
+    else rowStats.rowsWithMissingIsrc++;
+    if (r.artist && r.artist.trim().length > 0) rowStats.rowsWithArtist++;
 
     if (r.attention) {
       const prior = trackAttention[r.trackTitle] ?? emptyAttention();
@@ -200,5 +210,31 @@ export function computeMetrics(rows: RevenueRow[]): RevenueMetrics {
     last12Months,
     trackAttention,
     hasAttention,
+    rowStats,
+  };
+}
+
+// Prunes a metrics payload so it stays well under localStorage quota.
+// The full payload is usually compact already (~25-200 KB) but very long
+// catalogs can blow past quota when serialized — this keeps the top-K
+// entries that drive the analysis.
+export function pruneMetricsForStorage(m: RevenueMetrics): RevenueMetrics {
+  const TOP_TRACKS = 500;
+  const TOP_COUNTRIES = 80;
+  const TOP_PLATFORMS = 40;
+  const TOP_MONTHS = 60; // ~5 years
+  const tracks = m.revenueByTrack.slice(0, TOP_TRACKS);
+  const keepTrackTitles = new Set(tracks.map((t) => t.track));
+  const trackAttention: Record<string, TrackAttention> = {};
+  for (const [k, v] of Object.entries(m.trackAttention)) {
+    if (keepTrackTitles.has(k)) trackAttention[k] = v;
+  }
+  return {
+    ...m,
+    revenueByTrack: tracks,
+    revenueByCountry: m.revenueByCountry.slice(0, TOP_COUNTRIES),
+    revenueByPlatform: m.revenueByPlatform.slice(0, TOP_PLATFORMS),
+    monthlyRevenue: m.monthlyRevenue.slice(-TOP_MONTHS),
+    trackAttention,
   };
 }

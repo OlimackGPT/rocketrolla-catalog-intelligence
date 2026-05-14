@@ -45,11 +45,11 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 }
 
 export function AnalyticsView() {
-  const { rows, metrics, valuation, hasUserData, hydrated } = useCatalogData();
+  const { metrics, valuation, hasUserData, hydrated } = useCatalogData();
 
   const warnings = useMemo(
-    () => checkDataQuality({ rows, metrics, valuation, hasUserData }),
-    [rows, metrics, valuation, hasUserData],
+    () => checkDataQuality({ metrics, valuation, hasUserData }),
+    [metrics, valuation, hasUserData],
   );
 
   const topMetrics = [

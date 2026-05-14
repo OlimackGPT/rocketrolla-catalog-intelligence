@@ -1,4 +1,4 @@
-import { RevenueMetrics, RevenueRow } from './types';
+import { RevenueMetrics } from './types';
 import { buildValuation } from './valuation';
 
 export type DataWarningSeverity = 'info' | 'warn' | 'error';
@@ -10,13 +10,13 @@ export type DataWarning = {
 };
 
 export function checkDataQuality(input: {
-  rows: RevenueRow[];
   metrics: RevenueMetrics;
   valuation: ReturnType<typeof buildValuation>;
   hasUserData: boolean;
 }): DataWarning[] {
   const warnings: DataWarning[] = [];
-  const { rows, metrics, valuation, hasUserData } = input;
+  const { metrics, valuation, hasUserData } = input;
+  const stats = metrics.rowStats;
 
   if (!hasUserData) {
     warnings.push({
@@ -26,7 +26,7 @@ export function checkDataQuality(input: {
     });
   }
 
-  if (rows.length === 0) {
+  if (stats.totalRows === 0) {
     warnings.push({
       severity: 'error',
       title: 'No revenue rows detected',
@@ -35,20 +35,18 @@ export function checkDataQuality(input: {
     return warnings;
   }
 
-  const missingRevenue = rows.filter((r) => !Number.isFinite(r.revenueUsd) || r.revenueUsd <= 0).length;
-  if (missingRevenue > 0 && missingRevenue / rows.length > 0.1) {
+  if (stats.rowsWithMissingRevenue > 0 && stats.rowsWithMissingRevenue / stats.totalRows > 0.1) {
     warnings.push({
       severity: 'warn',
-      title: `${missingRevenue} rows are missing revenue`,
+      title: `${stats.rowsWithMissingRevenue} rows are missing revenue`,
       detail: 'A meaningful share of rows have zero or invalid revenue. Run rate and valuation may be understated.',
     });
   }
 
-  const missingDate = rows.filter((r) => !r.month || r.month.length < 7).length;
-  if (missingDate > 0) {
+  if (stats.rowsWithMissingDate > 0) {
     warnings.push({
       severity: 'warn',
-      title: `${missingDate} rows have unclear dates`,
+      title: `${stats.rowsWithMissingDate} rows have unclear dates`,
       detail: 'Date / month parsing failed on some rows. Monthly trend may be inaccurate.',
     });
   }
@@ -90,8 +88,7 @@ export function checkDataQuality(input: {
     });
   }
 
-  const missingIsrc = rows.filter((r) => !r.isrc || r.isrc.trim().length === 0).length;
-  if (missingIsrc / rows.length > 0.2) {
+  if (stats.rowsWithMissingIsrc / Math.max(1, stats.totalRows) > 0.2) {
     warnings.push({
       severity: 'warn',
       title: 'ISRC missing on many rows',

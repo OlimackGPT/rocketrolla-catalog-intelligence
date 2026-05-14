@@ -1,9 +1,19 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { parseCsvDetailed } from '@/lib/csv';
+import { computeMetrics, parseCsvDetailed, pruneMetricsForStorage } from '@/lib/csv';
 import { expectedColumnSchema } from '@/lib/sampleCsv';
 import { SampleCsvDownload } from '@/components/SampleCsvDownload';
+import { safeSetItem } from '@/lib/safeStorage';
+
+const CATALOG_KEY = 'rr_catalog';
+const LEGACY_ROWS_KEY = 'rr_rows';
+
+type StorageState =
+  | { kind: 'idle' }
+  | { kind: 'persisted' }
+  | { kind: 'pruned'; reason: 'quota' }
+  | { kind: 'session-only'; reason: 'quota' | 'unknown' };
 
 export function UploadPanel() {
   const [message, setMessage] = useState('');
@@ -13,6 +23,7 @@ export function UploadPanel() {
   const [isDragging, setIsDragging] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [storage, setStorage] = useState<StorageState>({ kind: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -21,6 +32,7 @@ export function UploadPanel() {
     setDetectedCols([]);
     setAttentionCols([]);
     setRowCount(null);
+    setStorage({ kind: 'idle' });
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
       setMessage('');
@@ -31,11 +43,43 @@ export function UploadPanel() {
     try {
       const text = await file.text();
       const { rows, detectedColumns, attentionColumnsFound } = parseCsvDetailed(text);
-      localStorage.setItem('rr_rows', JSON.stringify(rows));
+
+      // Aggregate metrics in-memory. Raw rows are intentionally discarded
+      // after this point — they never reach localStorage.
+      const metrics = computeMetrics(rows);
+
+      // First attempt: try storing the full aggregated payload.
+      let payload = JSON.stringify({ metrics });
+      let result = safeSetItem(CATALOG_KEY, payload);
+      let pruned = false;
+
+      if (!result.ok && result.reason === 'quota') {
+        // Second attempt: prune top entries (top 500 tracks, etc.) and retry.
+        const prunedMetrics = pruneMetricsForStorage(metrics);
+        payload = JSON.stringify({ metrics: prunedMetrics });
+        result = safeSetItem(CATALOG_KEY, payload);
+        pruned = result.ok;
+      }
+
+      // Always drop the legacy raw-rows key if it exists.
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.removeItem(LEGACY_ROWS_KEY);
+        } catch {}
+      }
+
+      if (result.ok) {
+        setStorage(pruned ? { kind: 'pruned', reason: 'quota' } : { kind: 'persisted' });
+      } else {
+        setStorage({ kind: 'session-only', reason: result.reason === 'quota' ? 'quota' : 'unknown' });
+      }
+
       setDetectedCols(detectedColumns);
       setAttentionCols(attentionColumnsFound);
       setRowCount(rows.length);
-      setMessage(`Successfully parsed ${rows.length.toLocaleString()} revenue rows from "${file.name}"`);
+      setMessage(
+        `Successfully parsed ${rows.length.toLocaleString()} revenue rows from "${file.name}"`,
+      );
       setIsSuccess(true);
     } catch (err) {
       setErrors([(err as Error).message || 'Unknown parse error.']);
@@ -120,6 +164,30 @@ export function UploadPanel() {
         </div>
       )}
 
+      {/* Storage notice — pruned or session-only */}
+      {storage.kind === 'pruned' && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
+          <p className="mb-1 text-[10px] font-bold tracking-widest uppercase text-amber-300">
+            Large catalog — pruned to fit
+          </p>
+          <p className="text-sm text-amber-200/80">
+            This CSV produced a summary larger than the browser&apos;s storage quota allows. RocketRolla saved the top entries (top tracks, platforms, territories, recent months) — every downstream view stays accurate.
+          </p>
+        </div>
+      )}
+      {storage.kind === 'session-only' && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
+          <p className="mb-1 text-[10px] font-bold tracking-widest uppercase text-amber-300">
+            Session-only mode
+          </p>
+          <p className="text-sm text-amber-200/80">
+            {storage.reason === 'quota'
+              ? "This CSV is too large to store raw in the browser. RocketRolla processed the summary instead — analytics, valuation, and the report will work in this session, but a page refresh will reset to the demo data."
+              : "Couldn't write the summary to the browser. The analysis still works in this session, but will reset on refresh."}
+          </p>
+        </div>
+      )}
+
       {/* Detected columns */}
       {detectedCols.length > 0 && (
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
@@ -156,7 +224,7 @@ export function UploadPanel() {
           </div>
           {rowCount !== null && (
             <p className="mt-3 text-xs text-white/30">
-              {rowCount.toLocaleString()} rows loaded · Data stored in session
+              {rowCount.toLocaleString()} rows parsed · Aggregated summary stored (raw rows are never persisted).
             </p>
           )}
           {attentionCols.length === 0 && (
@@ -176,7 +244,7 @@ export function UploadPanel() {
               Supported Column Schema
             </p>
             <p className="mt-1 text-xs text-white/40">
-              Flexible matching: non-standard headers auto-map where possible. Numbers can be plain (1240000), compact ("1.2M", "600k"), or comma-separated ("1,240,000").
+              Flexible matching: non-standard headers auto-map where possible. Numbers can be plain (1240000), compact (&quot;1.2M&quot;, &quot;600k&quot;), or comma-separated (&quot;1,240,000&quot;).
             </p>
           </div>
           <SampleCsvDownload />

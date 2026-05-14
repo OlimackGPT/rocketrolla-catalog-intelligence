@@ -1,4 +1,4 @@
-import { RevenueMetrics, RevenueRow } from './types';
+import { RevenueMetrics, RowStats } from './types';
 import { buildValuation } from './valuation';
 import { MomentumInputs, computeMomentumSignals } from './momentum';
 
@@ -59,21 +59,21 @@ function recentGrowthScore(metrics: RevenueMetrics): number {
   return clamp(50 + (ratio - 1) * 90);
 }
 
-function metadataCompleteness(rows: RevenueRow[]): number {
-  if (!rows.length) return 0;
-  const withIsrc = rows.filter((r) => r.isrc && r.isrc.trim().length > 0).length;
-  const withArtist = rows.filter((r) => r.artist && r.artist.trim().length > 0).length;
-  return clamp((withIsrc / rows.length) * 70 + (withArtist / rows.length) * 30);
+function metadataCompleteness(stats: RowStats): number {
+  if (!stats.totalRows) return 0;
+  const withIsrcRatio = stats.rowsWithIsrc / stats.totalRows;
+  const withArtistRatio = stats.rowsWithArtist / stats.totalRows;
+  return clamp(withIsrcRatio * 70 + withArtistRatio * 30);
 }
 
 export function computeDealReadiness(input: {
-  rows: RevenueRow[];
   metrics: RevenueMetrics;
   valuation: ReturnType<typeof buildValuation>;
   momentum: MomentumInputs;
 }): DealReadiness {
-  const { rows, metrics, valuation, momentum } = input;
+  const { metrics, valuation, momentum } = input;
   const signals = computeMomentumSignals(momentum);
+  const stats = metrics.rowStats;
 
   const trackHHI = herfindahl(metrics.revenueByTrack.map((t) => ({ revenue: t.revenue })));
   const platformHHI = herfindahl(metrics.revenueByPlatform.map((p) => ({ revenue: p.revenue })));
@@ -85,8 +85,8 @@ export function computeDealReadiness(input: {
     trackDiversification: clamp(100 - trackHHI * 100),
     platformDiversification: clamp(100 - platformHHI * 90),
     territoryDiversification: clamp(100 - countryHHI * 85),
-    metadataCompleteness: metadataCompleteness(rows),
-    ownershipClarity: rows.length > 0 ? 70 : 30,
+    metadataCompleteness: metadataCompleteness(stats),
+    ownershipClarity: stats.totalRows > 0 ? 70 : 30,
     valuationConfidence: valuation.confidence,
     partnerFit: valuation.scores.partnerFit,
     syncReadiness: clamp(valuation.scores.syncPotential * 0.6 + signals.syncReady * 0.4),

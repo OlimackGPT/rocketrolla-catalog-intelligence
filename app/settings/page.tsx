@@ -1,5 +1,7 @@
 'use client';
 
+import { safeRemoveItem } from '@/lib/safeStorage';
+
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
@@ -40,14 +42,13 @@ export default function SettingsPage() {
           Clear Session Data
         </p>
         <p className="mb-3 text-xs text-white/30">
-          Removes the uploaded CSV rows from local storage. Mock data will be used until a new CSV is uploaded.
+          Removes the persisted catalog summary from local storage. Mock data will be used until a new CSV is uploaded.
         </p>
         <button
           onClick={() => {
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('rr_rows');
-              alert('Session data cleared. Reload the page.');
-            }
+            safeRemoveItem('rr_catalog');
+            safeRemoveItem('rr_rows'); // legacy key cleanup
+            alert('Session data cleared. Reload the page.');
           }}
           className="rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-2 text-xs font-bold text-red-400 transition-all hover:bg-red-500/10"
         >

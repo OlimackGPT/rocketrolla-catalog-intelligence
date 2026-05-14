@@ -22,6 +22,19 @@ export type RevenueRow = {
   attention?: Partial<TrackAttention>;
 };
 
+// Row-derived counts used by data quality + deal readiness. Stored alongside
+// aggregated metrics so we never need to keep raw rows in localStorage.
+export type RowStats = {
+  totalRows: number;
+  rowsWithRevenue: number;
+  rowsWithMissingRevenue: number;
+  rowsWithDate: number;
+  rowsWithMissingDate: number;
+  rowsWithIsrc: number;
+  rowsWithMissingIsrc: number;
+  rowsWithArtist: number;
+};
+
 export type RevenueMetrics = {
   totalRevenue: number;
   monthlyRevenue: { month: string; revenue: number }[];
@@ -35,6 +48,7 @@ export type RevenueMetrics = {
   last12Months: number;
   trackAttention: Record<string, TrackAttention>;
   hasAttention: boolean;
+  rowStats: RowStats;
 };
 
 export const emptyAttention = (): TrackAttention => ({
@@ -46,4 +60,15 @@ export const emptyAttention = (): TrackAttention => ({
   playlistAdds: 0,
   socialViews: 0,
   engagement: 0,
+});
+
+export const emptyRowStats = (): RowStats => ({
+  totalRows: 0,
+  rowsWithRevenue: 0,
+  rowsWithMissingRevenue: 0,
+  rowsWithDate: 0,
+  rowsWithMissingDate: 0,
+  rowsWithIsrc: 0,
+  rowsWithMissingIsrc: 0,
+  rowsWithArtist: 0,
 });
