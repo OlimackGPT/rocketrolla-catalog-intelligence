@@ -1,0 +1,2 @@
+import { BrandCard, BrandBadge, SectionHeader } from '@/components/brand';
+export default function Page(){const s=Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL); const g=Boolean(process.env.GEMINI_API_KEY); return <BrandCard><SectionHeader label='System' title='Settings & Status'/><div className='mt-4 flex gap-3'><BrandBadge>Supabase: {s?'Connected':'Mock/Local mode'}</BrandBadge><BrandBadge>Gemini: {g?'Enabled':'Mock text mode'}</BrandBadge></div></BrandCard>}
