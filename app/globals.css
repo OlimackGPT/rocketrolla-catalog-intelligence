@@ -1,24 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --bg: #070a12;
-  --bg-soft: #0e1424;
-  --card: #121a2c;
-  --line: #25304a;
-  --text: #e7ecf7;
-  --muted: #94a3b8;
-  --accent: #5ea0ff;
-}
-
-body {
-  background: radial-gradient(circle at top, #18243e 0%, var(--bg) 45%);
-  color: var(--text);
-  font-feature-settings: "rlig" 1, "calt" 1;
-}
-
-.card { @apply rounded-2xl border p-5 shadow-2xl; background: linear-gradient(160deg, rgba(20,30,50,0.95), rgba(12,17,28,0.95)); border-color: var(--line); }
-.metric { @apply card; }
-.label { color: var(--muted); @apply text-xs uppercase tracking-[0.14em]; }
-.value { @apply mt-2 text-3xl font-semibold; }
+@tailwind base;@tailwind components;@tailwind utilities;
+body{@apply min-h-screen bg-background selection:bg-primary/30 text-white; background-image: radial-gradient(circle at 20% 0%, rgba(94,64,255,0.18), transparent 38%), radial-gradient(circle at 80% 8%, rgba(55,230,125,0.12), transparent 32%);} 
+.container-custom{@apply mx-auto max-w-7xl px-4 md:px-8;}
+.card-premium{@apply rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl;}
+.panel-premium{@apply rounded-2xl border border-white/10 bg-background/80 p-5;}
+.btn-primary{@apply inline-flex items-center rounded-xl bg-primary px-4 py-2 font-medium text-black hover:opacity-90;}
+.btn-secondary{@apply inline-flex items-center rounded-xl border border-white/20 bg-white/5 px-4 py-2 font-medium text-white hover:bg-white/10;}
+@media print { body{background:#fff!important;color:#111!important;} nav,.no-print{display:none!important;} .print-card{border:1px solid #ddd!important;background:#fff!important;} }

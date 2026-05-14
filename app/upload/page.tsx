@@ -1,2 +1,2 @@
 import { UploadPanel } from '@/components/UploadPanel';
-export default function UploadPage(){return <UploadPanel/>}
+export default function Page(){return <UploadPanel/>}
