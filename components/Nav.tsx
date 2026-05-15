@@ -13,6 +13,7 @@ const links: { label: string; href: Route; icon: string }[] = [
   { label: 'Readiness', href: '/readiness', icon: '◐' },
   { label: 'Partner Fit', href: '/recommendation', icon: '◎' },
   { label: 'Report', href: '/report', icon: '▤' },
+  { label: 'Artist Tools', href: '/artist-tools', icon: '✦' },
   { label: 'Settings', href: '/settings', icon: '⚙' },
 ];
 

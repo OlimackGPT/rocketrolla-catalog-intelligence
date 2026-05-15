@@ -30,13 +30,14 @@ declare namespace __next_route_internal_types__ {
 
   type StaticRoutes = 
     | `/`
+    | `/artist-tools`
+    | `/analytics`
     | `/artists`
     | `/artists/new`
-    | `/analytics`
+    | `/readiness`
     | `/recommendation`
     | `/report`
     | `/settings`
-    | `/readiness`
     | `/upload`
     | `/valuation`
   type DynamicRoutes<T extends string = string> = 
