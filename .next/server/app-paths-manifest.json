@@ -1,8 +1,11 @@
 {
   "/page": "app/page.js",
-  "/recommendation/page": "app/recommendation/page.js",
-  "/upload/page": "app/upload/page.js",
+  "/analytics/page": "app/analytics/page.js",
   "/artists/page": "app/artists/page.js",
+  "/upload/page": "app/upload/page.js",
   "/readiness/page": "app/readiness/page.js",
-  "/valuation/page": "app/valuation/page.js"
+  "/report/page": "app/report/page.js",
+  "/valuation/page": "app/valuation/page.js",
+  "/recommendation/page": "app/recommendation/page.js",
+  "/settings/page": "app/settings/page.js"
 }
